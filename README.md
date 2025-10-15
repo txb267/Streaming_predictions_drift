@@ -32,19 +32,78 @@ The Elec2 dataset is widely used because it contains **naturally occurring conce
 
 ### 2. SEA Concepts
 - **Type:** Synthetic dataset  
-- **Idea:** Simulates **sudden changes** in classification rules.  
+- **Idea:** Simulates **sudden (abrupt)** changes in classification rules.  
 - **Mechanism:**  
-  - Classification threshold changes at regular points in the stream.  
-  - Models are tested on how well they adapt to sudden distribution shifts.  
+  - Each sample has **three features (`x₁`, `x₂`, `x₃`)**.  
+  - Only `x₁` and `x₂` are relevant — `x₃` adds random noise.  
+  - The **label (Y)** is `True` if the sum of `x₁ + x₂` exceeds a **threshold (T)**, otherwise `False`.  
+  - **Concept drift** occurs when this threshold changes abruptly —  
+    for example, switching from `x₁ + x₂ > 8` to `x₁ + x₂ > 9`, creating a **new decision rule**.
 
+**X (features):**  
+`{0: x₁, 1: x₂, 2: x₃}` — numeric values per sample  
+**Y (label):**  
+Binary → `True` (1) or `False` (0)
+
+**Example:**
+```python
+from river.datasets import synth
+
+# Create two concepts with different thresholds
+sea_1 = synth.SEA(variant=0, seed=42)  # concept 1 (x₁ + x₂ > 8)
+sea_2 = synth.SEA(variant=1, seed=99)  # concept 2 (x₁ + x₂ > 9)
+
+# Simulate a data stream with an abrupt drift at sample 500
+stream = list(sea_1.take(500)) + list(sea_2.take(500))
+
+# Print first few samples
+for x, y in stream[:5]:
+    print(x, y)
+```
 ---
+```
+{0: 6.39, 1: 0.25, 2: 2.75} False
+{0: 2.23, 1: 7.36, 2: 6.76} True
+{0: 8.92, 1: 0.86, 2: 4.21} True
+{0: 0.29, 1: 2.18, 2: 5.05} False
+{0: 0.26, 1: 1.98, 2: 6.49} False
+```
 
 ### 3. Rotating Hyperplane
 - **Type:** Synthetic dataset  
-- **Idea:** Simulates **gradual changes** in data distribution.  
+- **Idea:** Simulates **gradual (continuous)** changes in data distribution.  
 - **Mechanism:**  
-  - A separating hyperplane is rotated incrementally.  
-  - Tests model adaptability to slowly evolving classification boundaries.  
+  - The dataset defines a **hyperplane** — a linear decision boundary separating two classes in a *d-dimensional space*.  
+  - Each instance is a point with `n_features` (e.g., 10), where all features contribute to the decision boundary.  
+  - The **label (Y)** is determined by which side of the hyperplane the instance lies on.  
+  - Over time, the hyperplane’s **orientation and position change slowly**, causing nearby samples to cross the boundary and **change class**.  
+  - This models **gradual concept drift**, where the data distribution evolves smoothly rather than abruptly.
+
+**Purpose of multiple features:**  
+Unlike the SEA dataset, which has only two relevant features, the Rotating Hyperplane uses **many features (e.g., 10)** to simulate high-dimensional, real-world data.  
+All features influence the class, but as the hyperplane rotates, their importance changes continuously — testing how well algorithms can **track slow, multidimensional drifts**.
+
+**X (features):**  
+A numeric vector with 10 dimensions → `{x₁, x₂, ..., x₁₀}`  
+**Y (label):**  
+Binary → `0` or `1`, depending on which side of the hyperplane the point lies on.
+
+**Example:**
+```python
+from river.datasets import synth
+
+# Simulate a continuously rotating hyperplane (gradual drift)
+dataset = synth.Hyperplane(seed=42, n_features=10, drift=0.001)
+
+for x, y in dataset.take(3):
+    print(x, y)
+```
+
+```
+{0: 0.34, 1: 0.62, 2: 0.58, 3: 0.14, ...} 1
+{0: 0.76, 1: 0.44, 2: 0.12, 3: 0.59, ...} 0
+{0: 0.22, 1: 0.93, 2: 0.52, 3: 0.11, ...} 1
+```
 
 ---
 
